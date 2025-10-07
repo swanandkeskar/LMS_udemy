@@ -13,6 +13,7 @@ const currency="₹";
     const navigate=useNavigate();
 
     const {getToken}=useAuth()
+   
     const {user}=useUser()
     const [allCourses, setAllCourses] = useState([])
     const [isEducator,setIsEducator]=useState(true)
@@ -69,6 +70,8 @@ const currency="₹";
        fetchUserEnrolledCourses()
      }, [])
 
+
+     
      const logToken =async()=>{
         console.log(await getToken());
      } 
