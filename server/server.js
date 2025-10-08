@@ -6,12 +6,14 @@ import { clerkWebhooks } from './controllers/webHooks.js';
 import educatorRuter from './routes/educatorRoutes.js';
 import { clerkMiddleware } from '@clerk/express';
 import bodyParser from "body-parser";
+import connectCloudinary from './configs/cloudinary.js';
 //Initialize Express 
 const app=express();
 
 //connect to database
 
 await connectDB()
+await connectCloudinary()
 
 
 //middleware
