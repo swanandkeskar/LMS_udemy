@@ -23,7 +23,6 @@ app.use(clerkMiddleware())
 //Routes
 app.get('/',(req,res)=>res.send("API Working"))
 app.post('/clerk',express.json(),clerkWebhooks)
-app.post('/api/webhooks/clerk', express.raw({ type: 'application/json' }), clerkWebhooks);
 app.use('/api/educator',express.json(),educatorRuter)
 
 //port
