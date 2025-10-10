@@ -4,38 +4,20 @@ import Course from '../models/Course.js'
 
 
 
-export const updateRollEducator = async (req, res) => {
-  try {
-    const { userId } = req.auth; // ✅ correct way
+export const updateRollEducator=async(req,res)=>{
+    try {
+        const { userId } = req.auth;
 
-    // Fetch user details from Clerk
-    const clerkUser = await clerkClient.users.getUser(userId);
-
-    // Check if user already exists in MongoDB
-    let user = await User.findById(userId);
-
-    if (!user) {
-      // Create new user in MongoDB
-      user = await User.create({
-        _id: userId,
-        name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim(),
-        email: clerkUser.emailAddresses[0].emailAddress,
-        imageUrl: clerkUser.imageUrl,
-      });
-      console.log("✅ User saved to MongoDB:", user.email);
+        await clerkClient.users.updateUserMetadata(userId,{
+            publicMetadata:{
+                role:'educator',
+            }
+        }) 
+        res.json({success:true,message:'You can publish a course now'});
+    } catch (error) {
+        res.json({success:false ,message:error.message})
     }
-
-    // Update role in Clerk metadata
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: { role: "educator" },
-    });
-
-    res.json({ success: true, message: "You can publish a course now" });
-  } catch (error) {
-    console.error("❌ Error saving user:", error.message);
-    res.json({ success: false, message: error.message });
-  }
-};
+}
 
 //add new Course 
 export const addCourse=async(req,res)=>{
