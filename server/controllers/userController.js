@@ -2,11 +2,11 @@ import User from "../models/User.js"
 import { Purchase } from "../models/Purchase.js";
 import Stripe from 'stripe'
 import Course from "../models/Course.js";
-import { coursProgress } from "../models/CourseProgress.js";
+import { courseProgress } from "../models/CourseProgress.js";
 
 export const getUserData=async(req,res)=>{
     try {
-        const userId= req.auth().userId
+        const userId= req.auth()?.userId
         const user=await User.findById(userId)
 
         if(!user){
@@ -90,9 +90,9 @@ export const purchaseCourse=async(req,res)=>{
 //update user course progress
 export const updateUserCourseProgress=async(req,res)=>{
     try {
-        const userId=req.auth().userId
+        const userId=req.auth().userId 
         const {courseId,lectureId}=req.body
-        const progressData=await coursProgress.findOne({userId,courseId})
+        const progressData=await courseProgress.findOne({userId,courseId})
 
         if(progressData){
             if(progressData.lectureCompleted.includes(lectureId)){
@@ -101,7 +101,7 @@ export const updateUserCourseProgress=async(req,res)=>{
             progressData.lectureCompleted.push(lectureId)
             await progressData.save()
         }else{
-            await coursProgress.create({
+            await courseProgress.create({
                 userId,
                 courseId,
                 lectureCompleted:[lectureId]
@@ -114,20 +114,19 @@ export const updateUserCourseProgress=async(req,res)=>{
     }
 } 
 
-
 //get user course progress 
 export const getUsercourseProgress=async(req,res)=>{
     try {
         const userId=req.auth().userId
         const {courseId,lectureId}=req.body
-        const progressData=await coursProgress.findOne(userId,courseId)
+        const progressData=await courseProgress.findOne({userId,courseId})
         res.json({success:true,progressData})
     } catch (error) {
         res.json({success:false,message:error.message})
 
     }
 }
-
+ 
 //add user ratings to course 
 export const addUserRating= async(req,res)=>{
     const userId=req.auth().userId;

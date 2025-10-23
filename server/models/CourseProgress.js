@@ -8,4 +8,4 @@ const courseProgressSchema=new mongoose.Schema({
 },{minimize:false})
 
 
- export const coursProgress=mongoose.model('CourseProgress',courseProgressSchema)
+ export const courseProgress=mongoose.model('CourseProgress',courseProgressSchema)

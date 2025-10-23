@@ -6,14 +6,16 @@ import { assets } from '../../assets/assets';
 import humanizeDuration from 'humanize-duration';
 import Footer from '../../components/students/Footer';
 import YouTube from 'react-youtube'
+import { toast } from 'react-toastify';
+import axios from 'axios';
 
 const CourseDetails = () => {
   const {id}=useParams();
   const [courseData, setcourseData] = useState(null);
-  const {allCourses,calculateRating,
+  const {calculateRating,
         calculateNoOfLectures,
         calculateChapterTime,
-        calculateCourseDuration,currency}=useContext(AppContext);
+        calculateCourseDuration,currency,backendUrl,userData,getToken}=useContext(AppContext);
 
 const [openSection, setOpenSection] = useState({});
 const [isAlredyEnrolled, setisAlredyEnrolled] = useState(false);
@@ -21,13 +23,51 @@ const [playesData, setplayesData] = useState(null);
 
 
   const fetchCourseData=async()=>{
-    const findCourse=allCourses.find(course=>course._id===id)
-    setcourseData(findCourse);
+    try {
+      const {data}=await axios.get(`${backendUrl}/api/course/${id}`);
+      
+      if(data.success){
+        setcourseData(data.courseData )
+      }else{
+        toast.error(data.message);
+      }
+    } catch (error) {
+        toast.error(error.message)
+    }
+  }
+  const enrollCourse=async ()=>{
+    try {
+      if(!userData){
+        return toast.warn('Login to Enroll!!')
+      }
+      if(isAlredyEnrolled){
+         return toast.warn('Alredy Enrolled!!')
+      }
+
+      const token=await getToken();
+      const {data}=await axios.post(backendUrl+'/api/user/purchase',{courseId:courseData._id},{headers:{Authorization:
+        `Bearer ${token}`
+      }})
+
+      if(data.success){
+        const {session_url}=data;
+        window.location.replace(session_url)
+      }else{
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
   }
   useEffect(()=>{
     fetchCourseData()
-  },[id,allCourses])
+  },[])
 
+  useEffect(() => {
+  if (userData && courseData) {
+    setisAlredyEnrolled(userData.enrolledCourses.includes(courseData._id))
+  }
+}, [userData, courseData]);
 const togleSection=(index)=>{
   setOpenSection((prev)=>(
     {...prev,
@@ -62,12 +102,12 @@ courseTitle}</h1>
               className='w-3.5 h-3.5' />
           ))}
           </div>
-          <p className='text-blue-600'>({courseData.courseRatings.length}{
-            courseData.courseRatings.length>1?' total ratings':' total rating'})</p>
-          <p>{courseData.enrolledStudents.length} {courseData.enrolledStudents.length > 1?
+          <p className='text-blue-600'>({courseData.courseRatings?.length||0}{
+            courseData.courseRatings?.length>1?' total ratings':' total rating'})</p>
+          <p>{courseData.enrolledStudents?.length||0} {courseData.enrolledStudents?.length > 1?
           "students":"student"}</p>
         </div>
-        <p className='text-sm'>Course By : <span className='text-blue-600 underline'>Joju George</span></p>
+        <p className='text-sm'>Course By : <span className='text-blue-600 underline'>{courseData.educator.name||"Swanand Keskar"}</span></p>
         <div className='pt-8 text-gray-800'>
           <h2 className='text-xl font-semibold'>Course Structure</h2>
           <div className='pt-5 '>{courseData.courseContent.map((chapter,index)=>(
@@ -81,7 +121,7 @@ courseTitle}</h1>
                    src={assets.down_arrow_icon} alt="down" />
                   <p className='font-medium text-sm md:text-base'>{chapter.chapterTitle}</p>
                 </div>
-                <p className='text-sm md:text-default'>{chapter.chapterContent.length} lectures - {calculateChapterTime(chapter)}</p>
+                <p className='text-sm md:text-default'>{chapter.chapterContent?.length||0} lectures - {calculateChapterTime(chapter)}</p>
               
               </div>
               <div className={`overflow-hidden transition-all duration-300
@@ -167,7 +207,7 @@ courseTitle}</h1>
                 <p>{calculateNoOfLectures(courseData)} lessons</p>
               </div>              
             </div>
-            <button className='md:mt-6 mt-4 w-full py-3 rounded bg-blue-600
+            <button onClick={enrollCourse} className='md:mt-6 mt-4 w-full py-3 rounded bg-blue-600
           text-white font-medium cursor-pointer'>
               {isAlredyEnrolled? 'Alredy Enrolled':'Enroll Now'}</button>
 

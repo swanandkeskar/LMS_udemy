@@ -3,14 +3,36 @@ import { assets } from '../../assets/assets'
 import { Link, useLocation } from 'react-router-dom'
 import {AppContext} from '../../context/AppContext'
 import { useClerk,UserButton,useUser } from '@clerk/clerk-react'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 
 const Navbar = () => {
   const {openSignIn}=useClerk()
   const {user}=useUser()
   const location=useLocation();
-  const {navigate,isEducator}=useContext(AppContext);
+  const {navigate,isEducator,backendUrl,setIsEducator,getToken}=useContext(AppContext);
   const isCourseListPage=location.pathname.includes('/course-list');
   
+  const becomeEducator=async(req,res)=>{
+    try {
+      if(isEducator){
+        navigate('/educator')
+        return ;
+      }
+      const token =await getToken()
+      const {data} = await axios.get(backendUrl+'/api/educator/update-role',{
+        headers:{Authorization:`Bearer ${token}`}
+      })
+      if(data.success){
+        setIsEducator(true)
+        toast.success(data.message);
+      }else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
 
   
   return (
@@ -25,7 +47,7 @@ const Navbar = () => {
       <div className='hidden md:flex items-center gap-5 text-gray-500'>
         <div className='flex items-center gap-5'>
          {user && <>
-          <button className='cursor-pointer' onClick={()=>{navigate('/educator')}}>{isEducator?"Educator Dashboard":
+          <button className='cursor-pointer' onClick={becomeEducator}>{isEducator?"Educator Dashboard":
           "Become Educator"}</button>
           <span>|</span>
           <Link to='/my-enrollments'>My Enrollements</Link></>}
@@ -36,7 +58,7 @@ const Navbar = () => {
       
       <div className='md:hidden flex items-center gap-2 sm:gap-5 text-gray-500'>
         <div >
-           {user && <><button onClick={()=>{navigate('/educator')}}>{isEducator?"Educator Dashboard":"Become Educator"}</button>
+           {user && <><button onClick={becomeEducator}>{isEducator?"Educator Dashboard":"Become Educator"}</button>
           <span>|</span>
           <Link to='/my-enrollments'>My Enrollements</Link></>}
           {user?(<button >signed in</button>):( <button ><img src={assets.user_icon} alt="" /></button>)}
