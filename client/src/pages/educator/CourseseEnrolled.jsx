@@ -1,15 +1,32 @@
-import React, { useEffect, useState } from 'react'
-import { dummyStudentEnrolled } from '../../assets/assets'
+import React, { useContext, useEffect, useState } from 'react'
 import Loading from '../../components/students/Loading'
+import { AppContext } from '../../context/AppContext'
+import axios from 'axios'
+import { toast } from 'react-toastify'
 const CourseseEnrolled = () => {
+  const {backendUrl,getToken,isEducator}=useContext(AppContext)
   const [enrolledStudents, setenrolledStudents] = useState(null)
 
   const fetchEnrolledStudents = async () => {
-    setenrolledStudents(dummyStudentEnrolled)
+    try {
+      const token=await getToken();
+      const {data}=await axios.get(backendUrl+'/api/educator/enrolled-students',
+        {headers:{Authorization:`Bearer ${token}`}}
+      )
+      if(data.success){
+        setenrolledStudents(data.enrolledStudents.reverse())
+      }else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)      
+    }
   }
   useEffect(() => {
-    fetchEnrolledStudents()
-  }, [])
+    if(isEducator){
+      fetchEnrolledStudents()
+    }
+  }, [isEducator])
 
   return enrolledStudents ? (
     <div className="min-h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0">
@@ -39,7 +56,7 @@ sm:table-cell">#</th>
                   <span className="truncate">{item.student.name}</span>
                 </td>
                 <td className="px-4 py-3 truncate">{item.courseTitle} </td>
-                <td className="px-4 py-3 hiddensm: table-cell">{new Date(item.
+                <td className="px-4 py-3 hidden sm:">{new Date(item.
                   purchaseDate).toLocaleDateString()}</td>
               </tr>
 

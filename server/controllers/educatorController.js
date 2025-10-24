@@ -2,6 +2,7 @@ import {clerkClient} from '@clerk/express'
 import {v2 as cloudinary} from 'cloudinary'
 import Course from '../models/Course.js'
 import { Purchase } from '../models/Purchase.js';
+import User from '../models/User.js';
 
 
 //update role to educator
@@ -67,68 +68,77 @@ export const getEducatorCourses=async(req,res)=>{
 
 //Get Educator DashBoard Data(Total Earning ,Enrolled Students ,No of Courses)
 
-export const educatorDashboardData=async(req,res)=>{
-    try {
-        const  educator=req.auth().userId
-        const courses= await Course.find({educator})
-        const totalCourses=courses.length;
+export const educatorDashboardData = async (req, res) => {
+  try {
+    const educator = req.auth().userId;
 
-        const courseIds=courses.map(course=>course._id)
+    // 1️⃣ Get all educator courses
+    const courses = await Course.find({ educator });
+    const totalCourses = courses.length;
+    const courseIds = courses.map(course => course._id);
 
-        //total earning from purchases 
-        const purchases= await Purchase.find({
-            courseId :{$in :courseIds},
-            status:'Completed'
-        });
-        const totalEarnings=purchases.reduce((sum,purchase)=>sum+purchase.amount,0)
+    // 2️⃣ Get all completed purchases for these courses
+    const purchases = await Purchase.find({
+      courseId: { $in: courseIds },
+      status: 'Completed'
+    })
+      .populate('userId', 'name imageUrl')
+      .populate('courseId', 'courseTitle price')
+      .sort({ createdAt: -1 });
 
-        //collect unique enrolled students ids with their course titles 
+    // 3️⃣ Calculate total earnings
+    const totalEarnings = purchases.reduce(
+      (sum, p) => sum + (p.amount || 0),
+      0
+    );
 
-        const enrolledStudentsData=[]
-        for(const course of courses){
-            const students=await User.find({
-            _id:{$in :course.enrolledStudents}
-            },'name imageUrl');
-            students.forEach(student => {
-                enrolledStudentsData.push({
-                    courseTitle:course.courseTitle,
-                    student
-                });
-                
-            });
-        }
-        res.json({success:true ,dashboardData:{
-            totalEarnings,enrolledStudentsData,totalCourses
-        }})
+    // 4️⃣ Latest 5 enrollments
+    const enrolledStudentsData = purchases.slice(0, 5).map(purchase => ({
+      student: purchase.userId,
+      courseTitle: purchase.courseId?.courseTitle,
+      purchaseDate: purchase.createdAt
+    }));
 
-        
-    } catch (error) {
-        res.json({success:false,message:error.message});
-    }
-}
+    // 5️⃣ Return in the same structure your frontend expects
+    res.json({
+      success: true,
+      dashBoardData: {
+        totalCourses,
+        totalEarnings,
+        enrolledStudentsData
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard Error:', error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 
 //Get Enrolled Students Data with purchase Data
 
-export const getEnrolledStudentsData=async(req,res)=>{
-    try {
-        const educator=req.auth().userId;
-        const courses=await Course.find({educator});
-        const courseIds=courses.map(course=>course._id);
+export const getEnrolledStudentsData = async (req, res) => {
+  try {
+    const educator = req.auth().userId;
+    const courses = await Course.find({ educator });
+    const courseIds = courses.map(course => course._id);
 
-        const purchases =await Purchase.find({
-            courseId:{$in:courseIds},
-            status:'Completed'
-        }).populate('userId','name imageUrl').populate('courseId','courseTitle');
+    const purchases = await Purchase.find({
+      courseId: { $in: courseIds },
+      status: 'Completed'
+    })
+      .populate('userId', 'name imageUrl')
+      .populate('courseId', 'courseTitle')
+      .sort({ createdAt: -1 });
 
-        const enrolledStudents=purchases.map(purchase=>({
+    const enrolledStudents = purchases.map(purchase => ({
+      student: purchase.userId,
+      courseTitle: purchase.courseId?.courseTitle,
+      purchaseDate: purchase.createdAt
+    }));
 
-            student:purchase.userId,
-            courseTitle:purchase.courseId.courseTitle,
-            purchaseData:purchase.createdAt
-        }))
-
-        res.json({success:true,enrolledStudents})
-    } catch (error) {
-        res.json({success:false,message:error.message})
-    }
-}
+    res.json({ success: true, enrolledStudents });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
